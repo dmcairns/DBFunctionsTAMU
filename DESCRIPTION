@@ -1,0 +1,16 @@
+Package: DBFunctionsTAMU
+Type: Package
+Title: Database Functions to Allow Access to TAMU Data
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "David", "Cairns",
+      email = "cairns@tamu.edu",
+      role = c("aut", "cre")
+    )
+  )
+Description: This package creates the connection to the TAMU Database.
+    Also contains a function to close all open DB Connections.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
