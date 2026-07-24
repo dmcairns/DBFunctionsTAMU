@@ -1,7 +1,7 @@
 require(DBI)
 require(dbplyr)
 
-##### Database Connection ----
+##### Database Connection Functions----
 
 createDBConnection <- function(oldServer=FALSE){
   if (oldServer == TRUE){
