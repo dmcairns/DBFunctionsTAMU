@@ -76,6 +76,22 @@ upsert_mariadb <- function(conn, local_df, target_table, unique_keys) {
   message(sprintf("Success! Processed %d rows (affected count: %d) in '%s'.", nrow(local_df), rows_affected, target_table))
   return(rows_affected)
 }
+
+checkForUniqueKeys <- function(inTable, oldServer=FALSE){
+  # This function checks for the existence of unique keys in a database table
+  dbConn <- DBFunctionsTAMU::createDBConnection(oldServer=FALSE)
+  t.results <- DBI::dbGetQuery(dbConn, "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME
+                                        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                                        WHERE TABLE_SCHEMA = 'DH_Admin_Data'")
+  DBFunctionsTAMU::closeAllDBConnections()
+  if(nrow(t.results)>0){
+    keys <- t.results %>%
+      dplyr::filter(TABLE_NAME==inTable) %>%
+      pull(COLUMN_NAME)
+  }
+  if (length(keys>0)) return(keys) else return(NULL)
+}
+
 #####
 
 
