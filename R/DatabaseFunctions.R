@@ -29,51 +29,59 @@ closeAllDBConnections <- function(){
 }
 
 upsert_mariadb <- function(conn, local_df, target_table, unique_keys) {
+  # 0. Early return if input dataframe is empty
+  if (nrow(local_df) == 0) {
+    message("Input data frame is empty. No operations performed.")
+    return(0)
+  }
+
+  # Strip R row names attribute so DBI doesn't create extra columns
+  rownames(local_df) <- NULL
+
   # 1. Generate a unique name for the temporary staging table
   staging_table <- paste0("tmp_staging_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
 
   # Ensure the staging table is dropped even if the function errors out early
   on.exit({
-    if (DBI::dbExistsTable(conn, staging_table)) {
-      DBI::dbRemoveTable(conn, staging_table)
-    }
-  })
+    try(DBI::dbExecute(conn, sprintf("DROP TABLE IF EXISTS `%s`;", staging_table)), silent = TRUE)
+  }, add = TRUE)
 
-  # 2. Upload the local data frame to a temporary table in MariaDB
+  # 2. Upload local data frame to temporary table
   message("Uploading local data to a temporary staging table...")
   DBI::dbWriteTable(conn, name = staging_table, value = local_df,
-               overwrite = TRUE, temporary = TRUE)
+                    overwrite = TRUE, temporary = TRUE, row.names = FALSE)
 
-  # 3. Get all column names to build the SQL dynamically
+  # 3. Build dynamic column strings and join conditions
   all_cols <- colnames(local_df)
-  non_key_cols <- setdiff(all_cols, unique_keys)
-
   escaped_all_cols <- paste0('`', all_cols, '`', collapse = ", ")
   escaped_staging_cols <- paste0('s.`', all_cols, '`', collapse = ", ")
 
-  # Handle case where there are no non-key columns to update
-  if (length(non_key_cols) > 0) {
-    update_assignments <- paste0(
-      '`', non_key_cols, '` = s.`', non_key_cols, '`',
-      collapse = ", "
-    )
-  } else {
-    # If no columns to update, perform a dummy update on the first key to avoid syntax error
-    update_assignments <- paste0('`', unique_keys[1], '` = s.`', unique_keys[1], '`')
-  }
+  # Create key match conditions for WHERE NOT EXISTS (e.g., t.`col1` <=> s.`col1` AND t.`col2` <=> s.`col2`)
+  # Note: Uses NULL-safe equality operator (<=>) so NULL values match correctly
+  join_conditions <- paste0(
+    't.`', unique_keys, '` <=> s.`', unique_keys, '`',
+    collapse = " AND "
+  )
 
-  # 4. Construct the correct MariaDB "ON DUPLICATE KEY UPDATE" SQL string
+  # 4. Construct SQL to INSERT only rows where matching unique_keys don't already exist
+  # row_names in target_table will automatically populate via default/auto_increment
   upsert_sql <- sprintf("
     INSERT INTO `%s` (%s)
-    SELECT %s FROM `%s` s
-    ON DUPLICATE KEY UPDATE %s;
-  ", target_table, escaped_all_cols, escaped_staging_cols, staging_table, update_assignments)
+    SELECT %s
+    FROM `%s` s
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM `%s` t
+      WHERE %s
+    );
+  ", target_table, escaped_all_cols, escaped_staging_cols, staging_table, target_table, join_conditions)
 
-  # 5. Execute the upsert query
-  message("Executing remote database upsert...")
+  # 5. Execute query
+  message("Executing remote database insert for new records...")
   rows_affected <- DBI::dbExecute(conn, upsert_sql)
 
-  message(sprintf("Success! Processed %d rows (affected count: %d) in '%s'.", nrow(local_df), rows_affected, target_table))
+  message(sprintf("Success! Processed %d local rows (%d new rows inserted) into '%s'.",
+                  nrow(local_df), rows_affected, target_table))
   return(rows_affected)
 }
 
