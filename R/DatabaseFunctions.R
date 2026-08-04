@@ -11,7 +11,7 @@ createDBConnection <- function(oldServer=FALSE){
     if(theHost == "geog-shiny.artsci.tamu.edu") {
       hostIP <- '127.0.0.1'
     } else {
-      hostIP <- '128.194.46.125'
+      hostIP <- '10.55.182.125'
     }
   }
 
