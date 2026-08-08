@@ -3,7 +3,7 @@ require(dbplyr)
 
 ##### Database Connection ----
 
-createDBConnection <- function(oldServer=TRUE){
+createDBConnection <- function(oldServer=FALSE){
   if (oldServer == TRUE){
     hostIP <- '128.194.19.22'
   } else {
