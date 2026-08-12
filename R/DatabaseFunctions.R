@@ -22,6 +22,37 @@ createDBConnection <- function(oldServer=FALSE){
                     password = Sys.getenv("DB_PASSWORD"))
 }
 
+createDBConnection_abpa <- function(db_name, requirePW=TRUE){
+  if(requirePW){
+  my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
+
+  if (is.null(my_pass) || nchar(my_pass) == 0) {
+    stop("Password entry was canceled or empty.")
+  }
+
+  # Determine driver path based on Mac architecture
+  freetds_path <- if (file.exists("/opt/homebrew/lib/libtdsodbc.so")) {
+    "/opt/homebrew/lib/libtdsodbc.so"  # Apple Silicon
+  } else {
+    "/usr/local/lib/libtdsodbc.so"     # Intel Mac
+  }
+
+  con <- DBI::dbConnect(
+    odbc::odbc(),
+    Driver      = freetds_path,
+    Server      = "sql-rptdata.as.tamu.edu",
+    Database    = db_name,
+    Port        = 1433,
+    UID         = "AUTH\\cairns",      # Note double backslash
+    PWD         = my_pass,
+    TDS_Version = "7.4"
+  )
+  return(con)
+  } else {
+    cat("Code not written for stored passwords\n")
+  }
+}
+
 closeAllDBConnections <- function(){
   my_driver <- DBI::dbDriver("MySQL")
   all_connections <- DBI::dbListConnections(my_driver)
