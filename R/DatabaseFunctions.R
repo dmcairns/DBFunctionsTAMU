@@ -22,7 +22,7 @@ createDBConnection <- function(oldServer=FALSE){
                     password = Sys.getenv("DB_PASSWORD"))
 }
 
-createDBConnection_abpa <- function(db_name, requirePW=TRUE){
+createDBConnection_abpa <- function(db_server, db_name, requirePW=TRUE){
   if(requirePW){
     my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
 
@@ -40,7 +40,7 @@ createDBConnection_abpa <- function(db_name, requirePW=TRUE){
     con <- DBI::dbConnect(
       odbc::odbc(),
       Driver      = freetds_path,
-      Server      = "sql-rptdata.as.tamu.edu",
+      Server      = db_server,
       Database    = db_name,
       Port        = 1433,
       UID         = "AUTH\\cairns",      # Note double backslash
