@@ -24,7 +24,8 @@ createDBConnection <- function(oldServer=FALSE){
 
 createDBConnection_abpa <- function(db_server, db_name, requirePW=TRUE){
   if(requirePW){
-    my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
+    #my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
+    my_pass <- keyring::key_get(service = "abpa", username = "cairns")
 
     if (is.null(my_pass) || nchar(my_pass) == 0) {
       stop("Password entry was canceled or empty.")
@@ -57,6 +58,16 @@ closeAllDBConnections <- function(){
   my_driver <- DBI::dbDriver("MySQL")
   all_connections <- DBI::dbListConnections(my_driver)
   lapply(all_connections, DBI::dbDisconnect)
+}
+
+closeAllDBConnections_abpa <- function(){
+
+  # Find all objects in the global environment that match the 'DBIConnection' class
+  all_objects <- mget(ls(envir = .GlobalEnv), envir = .GlobalEnv)
+  open_conns <- all_objects[sapply(all_objects, function(x) inherits(x, "DBIConnection"))]
+
+  # Close the active connection objects
+  lapply(open_conns, DBI::dbDisconnect)
 }
 
 upsert_mariadb <- function(conn, local_df, target_table, unique_keys) {
