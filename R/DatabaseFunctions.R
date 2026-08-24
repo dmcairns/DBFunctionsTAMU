@@ -3,6 +3,11 @@ require(dbplyr)
 
 ##### Database Connection ----
 
+#' Open a DB Connection
+#'
+#' @param oldServer Logical to flag if using the old server
+#' @return Database Connection
+#' @export
 createDBConnection <- function(oldServer=FALSE){
   if (oldServer == TRUE){
     hostIP <- '128.194.19.22'
@@ -22,7 +27,14 @@ createDBConnection <- function(oldServer=FALSE){
                     password = Sys.getenv("DB_PASSWORD"))
 }
 
-createDBConnection_abpa <- function(db_server, db_name, requirePW=TRUE){
+#' Open a DB Connection to ABPA servers
+#'
+#' @param db_server Name of the server
+#' @param db_name Name of the DB
+#' @param requirePW Logical value to flag if password is required.
+#' @return Database Connection
+#' @export
+createDBConnection_abpa <- function(db_server, db_name=NULL, requirePW=TRUE){
   if(requirePW){
     #my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
     my_pass <- keyring::key_get(service = "abpa", username = "cairns")
@@ -37,29 +49,49 @@ createDBConnection_abpa <- function(db_server, db_name, requirePW=TRUE){
     } else {
       "/usr/local/lib/libtdsodbc.so"     # Intel Mac
     }
-
-    con <- DBI::dbConnect(
-      odbc::odbc(),
-      Driver      = freetds_path,
-      Server      = db_server,
-      Database    = db_name,
-      Port        = 1433,
-      UID         = "AUTH\\cairns",      # Note double backslash
-      PWD         = my_pass,
-      TDS_Version = "7.4"
-    )
+    if(!is.null(db_name)){
+      con <- DBI::dbConnect(
+        odbc::odbc(),
+        Driver      = freetds_path,
+        Server      = db_server,
+        Database    = db_name,
+        Port        = 1433,
+        UID         = "AUTH\\cairns",      # Note double backslash
+        PWD         = my_pass,
+        TDS_Version = "7.4"
+      )
+    } else {
+      con <- DBI::dbConnect(
+        odbc::odbc(),
+        Driver      = freetds_path,
+        Server      = db_server,
+        Database    = db_name,
+        Port        = 1433,
+        UID         = "AUTH\\cairns",      # Note double backslash
+        PWD         = my_pass,
+        TDS_Version = "7.4"
+      )
+    }
     return(con)
   } else {
     cat("Code not written for stored passwords\n")
   }
 }
 
+#' Close non-ABPA server connections
+#'
+#' @return Logical value for each closed connection
+#' @export
 closeAllDBConnections <- function(){
   my_driver <- DBI::dbDriver("MySQL")
   all_connections <- DBI::dbListConnections(my_driver)
   lapply(all_connections, DBI::dbDisconnect)
 }
 
+#' Close ABPA server connections
+#'
+#' @return Logical value for each closed connection
+#' @export
 closeAllDBConnections_abpa <- function(){
 
   # Find all objects in the global environment that match the 'DBIConnection' class
@@ -70,6 +102,15 @@ closeAllDBConnections_abpa <- function(){
   lapply(open_conns, DBI::dbDisconnect)
 }
 
+
+#' Upsert entries into maria DB
+#'
+#' @param conn Database connection
+#' @param local_df Data frame for local data
+#' @param target_table Target table to add data to
+#' @param unique_keys Unique keys
+#'
+#' @export
 upsert_mariadb <- function(conn, local_df, target_table, unique_keys) {
   # 0. Early return if input dataframe is empty
   if (nrow(local_df) == 0) {
@@ -127,6 +168,12 @@ upsert_mariadb <- function(conn, local_df, target_table, unique_keys) {
   return(rows_affected)
 }
 
+#' Checks if Unique Keys exist
+#'
+#' @param inTable Name of DB table
+#' @param oldServer Logical value to flag old server
+#'
+#' @export
 checkForUniqueKeys <- function(inTable, oldServer=FALSE){
   # This function checks for the existence of unique keys in a database table
   dbConn <- DBFunctionsTAMU::createDBConnection(oldServer=FALSE)
