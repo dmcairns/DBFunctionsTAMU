@@ -1,7 +1,7 @@
 Package: DBFunctionsTAMU
 Type: Package
 Title: Database Functions to Allow Access to TAMU Data
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person(
       "David", "Cairns",
