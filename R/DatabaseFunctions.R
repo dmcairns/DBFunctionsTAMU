@@ -78,6 +78,35 @@ createDBConnection_abpa <- function(db_server, db_name=NULL, requirePW=TRUE){
   }
 }
 
+
+#' Open a DB Connection to Helio Redshift server
+#'
+#' @param db_server Name of the server
+#' @param db_name Name of the DB
+#' @param requirePW Logical value to flag if password is required.
+#' @return Database Connection
+#' @export
+createDBConnection_redshift <- function(db_server, db_name=NULL, requirePW=TRUE){
+  if(requirePW){
+    #my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
+    my_pass <- keyring::key_get(service = "abpa", username = "cairns")
+
+    if (is.null(my_pass) || nchar(my_pass) == 0) {
+      stop("Password entry was canceled or empty.")
+    }
+    con <- DBI::dbConnect(
+      RPostgres::Redshift(),
+      dbname = "tamu",
+      host = "tamu-usv-rs-01.ckpwibmvkp9u.us-east-1.redshift.amazonaws.com",
+      port = 5439,
+      user = Sys.getenv("REDSHIFT_USER"),
+      password = Sys.getenv("REDSHIFT_PASSWORD")
+    )
+    return(con)
+  }
+}
+
+
 #' Close non-ABPA server connections
 #'
 #' @return Logical value for each closed connection
