@@ -86,7 +86,8 @@ createDBConnection_abpa <- function(db_server, db_name=NULL, requirePW=TRUE){
 #' @param requirePW Logical value to flag if password is required.
 #' @return Database Connection
 #' @export
-createDBConnection_redshift <- function(db_server, db_name=NULL, requirePW=TRUE){
+createDBConnection_redshift <- function(db_server="tamu-usv-rs-01.ckpwibmvkp9u.us-east-1.redshift.amazonaws.com",
+                                        db_name="tamu", requirePW=TRUE){
   if(requirePW){
     #my_pass <- rstudioapi::askForPassword("Enter your TAMU Password")
     my_pass <- keyring::key_get(service = "abpa", username = "cairns")
@@ -96,8 +97,8 @@ createDBConnection_redshift <- function(db_server, db_name=NULL, requirePW=TRUE)
     }
     con <- DBI::dbConnect(
       RPostgres::Redshift(),
-      dbname = "tamu",
-      host = "tamu-usv-rs-01.ckpwibmvkp9u.us-east-1.redshift.amazonaws.com",
+      dbname = db_name,
+      host = db_server,
       port = 5439,
       user = Sys.getenv("REDSHIFT_USER"),
       password = Sys.getenv("REDSHIFT_PASSWORD")
